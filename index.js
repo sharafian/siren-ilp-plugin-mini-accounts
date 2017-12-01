@@ -148,6 +148,12 @@ class Plugin extends AbstractBtpPlugin {
     }
     // const ilp = IlpPacket.deserializeIlpPayment(prepare.protocolData[0].data)
 
+    const xrpAddressKey = account + ':xrp_address'
+    await this._balances.load(xrpAddressKey)
+    if (!this._balances.get(xrpAddressKey) {
+      throw new Error('Account is invalid; no XRP address has been associated')
+    }
+
     await this._balances.load(account)
     const currentBalance = new BigNumber(this._balances.get(account) || 0)
 
