@@ -35,6 +35,7 @@ class Plugin extends AbstractBtpPlugin {
     this._connections = new Map()
 
     this.on('outgoing_fulfill', this._handleOutgoingFulfill.bind(this))
+    this.on('incoming_fulfill', this._handleIncomingFulfill.bind(this))
     this.on('incoming_reject', this._handleIncomingReject.bind(this))
 
     if (this._modeInfiniteBalances) {
@@ -163,7 +164,7 @@ class Plugin extends AbstractBtpPlugin {
       throw new Error('Insufficient funds, have: ' + currentBalance + ' need: ' + prepare.amount)
     }
 
-    this._balances.set(account, newBalance.toString())
+    this._balances.set(account, newBalance.toString(), false)
 
     debug(`account ${account} debited ${prepare.amount} units, new balance ${newBalance}`)
   }
@@ -175,9 +176,19 @@ class Plugin extends AbstractBtpPlugin {
     const currentBalance = new BigNumber(this._balances.get(account) || 0)
     const newBalance = currentBalance.add(transfer.amount)
 
-    this._balances.set(account, newBalance.toString())
+    this._balances.set(account, newBalance.toString(), true)
 
     debug(`account ${account} credited ${transfer.amount} units, new balance ${newBalance}`)
+  }
+
+  async _handleIncomingFulfill (transfer) {
+    const account = ilpAddressToAccount(this._prefix, transfer.from)
+    await this._balances.load(account)
+
+    const currentBalance = new BigNumber(this._balances.get(account) || 0)
+    this._balances.set(account, newBalance.toString(), true)
+
+    debug(`account ${account} finalized ${transfer.amount} units, new balance ${newBalance}`)
   }
 
   async _handleIncomingReject (transfer) {
@@ -187,7 +198,7 @@ class Plugin extends AbstractBtpPlugin {
     const currentBalance = new BigNumber(this._balances.get(account) || 0)
     const newBalance = currentBalance.add(transfer.amount)
 
-    this._balances.set(account, newBalance.toString())
+    this._balances.set(account, newBalance.toString(), false)
 
     debug(`account ${account} credited ${transfer.amount} units, new balance ${newBalance}`)
   }
